@@ -1,0 +1,138 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "..fullname" . }}
+  labels:
+    {{- include "..labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "..selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "..selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "..serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: privatepages
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.privatepages.image.repository }}:{{ .Values.privatepages.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.privatepages.image.pullPolicy }}
+          env:
+            {{- range $key, $value := .Values.privatepages.env }}
+            - name: {{ $key }}
+              value: {{ tpl ($value | toString) $ }}
+            {{- end }}
+          ports:
+            - name: privatepages
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: privatepages
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: privatepages
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        - name: nginx
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+          resources:
+            {{- toYaml .Values.nginx.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+            - name: config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: data
+              mountPath: /var/www/html
+        {{- if .Values.nginx.metrics.enable }}
+        - name: nginx-metrics
+          image: "{{ .Values.nginxMetrics.image.repository }}:{{ .Values.nginxMetrics.image.tag }}"
+          imagePullPolicy: {{ .Values.nginxMetrics.image.pullPolicy }}
+          args: ["-nginx.scrape-uri=http://127.0.0.1:80/stub_status"]
+          ports:
+            - name: nginx-metrics
+              containerPort: 9113
+          resources:
+            {{- toYaml .Values.nginxMetrics.resources | nindent 12 }}
+        {{- end }}
+        - name: oauth2-proxy
+          image: "{{ .Values.oauth2proxy.image.repository }}:{{ .Values.oauth2proxy.image.tag }}"
+          imagePullPolicy: {{ .Values.oauth2proxy.image.pullPolicy }}
+          env:
+            {{- range $key, $value := .Values.oauth2proxy.env }}
+            - name: {{ $key }}
+              value: {{ tpl ($value | toString) $ }}
+            {{- end }}
+          ports:
+            - name: oauth2-proxy
+              containerPort: 4180
+              protocol: TCP
+            {{- if .Values.oauth2proxy.metrics.enable }}
+            - name: oauth2-proxy-metrics
+              containerPort: 9090
+              protocol: TCP
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: oauth2-proxy
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: oauth2-proxy
+          resources:
+            {{- toYaml .Values.oauth2proxy.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "..fullname" . }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "..fullname" . }}-data
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

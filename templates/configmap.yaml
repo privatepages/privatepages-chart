@@ -1,0 +1,146 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "..fullname" . }}
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    error_log  /var/log/nginx/error.log notice;
+    pid        /var/run/nginx.pid;
+    events {
+        worker_connections  1024;
+    }
+    http {
+        server_tokens off;
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+        log_format main escape=json
+            '{'
+            '"message":"$status $request_method $scheme://$host$request_uri",'
+            '"upstream_response_time":"$upstream_response_time",'
+            '"remote_addr":"$remote_addr",'
+            '"http_x_ip":"$http_x_ip",'
+            '"http_x_forwarded_for":"$http_x_forwarded_for",'
+            '"http_cf_connecting_ip":"$http_cf_connecting_ip",'
+            '"realip_remote_addr":"$realip_remote_addr",'
+            '"req_host":"$host",'
+            '"server_port":"$server_port",'
+            '"scheme":"$scheme",'
+            '"request_uri":"$request_uri",'
+            '"uri":"$uri",'
+            '"request_length":"$request_length",'
+            '"query_string":"$query_string",'
+            '"remote_user":"$remote_user",'
+            '"request":"$request",'
+            '"request_method":"$request_method",'
+            '"status": "$status",'
+            '"body_bytes_sent":"$body_bytes_sent",'
+            '"bytes_sent":"$bytes_sent",'
+            '"request_time":"$request_time",'
+            '"http_referrer":"$http_referer",'
+            '"http_user_agent":"$http_user_agent",'
+            '"http_cf_ray":"$http_cf_ray",'
+            '"ssl_protocol":"$ssl_protocol",'
+            '"server_protocol":"$server_protocol",'
+            '"ssl_cipher":"$ssl_cipher"'
+            '}';
+        access_log  /var/log/nginx/access.log  main;
+        sendfile    on;
+        tcp_nopush  on;
+        tcp_nodelay on;
+        keepalive_timeout 10;
+        include /etc/nginx/conf.d/*.conf;
+    }
+
+  default.conf: | 
+    server {
+        listen              80;
+        server_name         _;
+
+        location /stub_status {
+            allow 10.0.0.0/8;
+            allow 127.0.0.1/32;
+            deny all;
+            access_log off;
+            stub_status;
+        }
+
+        location /ping {
+            access_log off;
+            default_type text/plain;
+            return 200 "ok\n";
+        }
+
+        location = /upload {
+            proxy_pass       http://127.0.0.1:8080;
+            proxy_set_header Host             $host;
+            proxy_set_header X-Real-IP        $remote_addr;
+            proxy_set_header X-Scheme         $scheme;
+        }
+
+        location /oauth2/ {
+            proxy_pass       http://127.0.0.1:4180;
+            proxy_set_header Host                    $host;
+            proxy_set_header X-Real-IP               $remote_addr;
+            proxy_set_header X-Scheme                $scheme;
+            proxy_set_header X-Auth-Request-Redirect $request_uri;
+            # or, if you are handling multiple domains:
+            # proxy_set_header X-Auth-Request-Redirect $scheme://$host$request_uri;
+        }
+
+        location = /oauth2/auth {
+            proxy_pass       http://127.0.0.1:4180;
+            proxy_set_header Host             $host;
+            proxy_set_header X-Real-IP        $remote_addr;
+            proxy_set_header X-Scheme         $scheme;
+            # nginx auth_request includes headers but not body
+            proxy_set_header Content-Length   "";
+            proxy_pass_request_body           off;
+        }
+
+        location / {
+            auth_request /oauth2/auth;
+            error_page 401 = /oauth2/sign_in;
+
+            # pass information via X-User and X-Email headers to backend,
+            # requires running with --set-xauthrequest flag
+            auth_request_set $user   $upstream_http_x_auth_request_user;
+            auth_request_set $email  $upstream_http_x_auth_request_email;
+            proxy_set_header X-User  $user;
+            proxy_set_header X-Email $email;
+
+            # if you enabled --pass-access-token, this will pass the token to the backend
+            auth_request_set $token  $upstream_http_x_auth_request_access_token;
+            proxy_set_header X-Access-Token $token;
+
+            # if you enabled --cookie-refresh, this is needed for it to work with auth_request
+            auth_request_set $auth_cookie $upstream_http_set_cookie;
+            add_header Set-Cookie $auth_cookie;
+
+            # When using the --set-authorization-header flag, some provider's cookies can exceed the 4kb
+            # limit and so the OAuth2 Proxy splits these into multiple parts.
+            # Nginx normally only copies the first `Set-Cookie` header from the auth_request to the response,
+            # so if your cookies are larger than 4kb, you will need to extract additional cookies manually.
+            auth_request_set $auth_cookie_name_upstream_1 $upstream_cookie_auth_cookie_name_1;
+
+            # Extract the Cookie attributes from the first Set-Cookie header and append them
+            # to the second part ($upstream_cookie_* variables only contain the raw cookie content)
+            if ($auth_cookie ~* "(; .*)") {
+                set $auth_cookie_name_0 $auth_cookie;
+                set $auth_cookie_name_1 "auth_cookie_name_1=$auth_cookie_name_upstream_1$1";
+            }
+
+            # Send both Set-Cookie headers now if there was a second part
+            if ($auth_cookie_name_upstream_1) {
+                add_header Set-Cookie $auth_cookie_name_0;
+                add_header Set-Cookie $auth_cookie_name_1;
+            }
+
+            # proxy_pass http://backend/;
+            # or "root /path/to/site;" or "fastcgi_pass ..." etc
+            root /var/www/html;
+            index index.html;
+        }
+    }

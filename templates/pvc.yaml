@@ -1,0 +1,9 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "..fullname" . }}-data
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources: {{ .Values.storage.resources | toYaml | nindent 4 }}

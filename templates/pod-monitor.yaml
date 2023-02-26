@@ -1,0 +1,36 @@
+{{- if .Values.nginx.metrics.enable }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "..fullname" . }}-nginx
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "..fullname" . }}
+  podMetricsEndpoints:
+    - port: nginx-metrics
+      interval: 30s
+      path: /metrics
+      targetPort: 9113
+{{- end }}
+{{- if .Values.oauth2proxy.metrics.enable }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "..fullname" . }}-oauth2-proxy
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "..fullname" . }}
+  podMetricsEndpoints:
+    - port: oauth2-proxy-metrics
+      interval: 30s
+      path: /metrics
+      targetPort: 9090
+{{- end }}
