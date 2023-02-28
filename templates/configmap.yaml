@@ -73,7 +73,8 @@ data:
             return 200 "ok\n";
         }
 
-        location = /upload {
+        location ~ ^/(upload|remove)$ {
+            client_max_body_size {{ .Values.privatepages.env.HTTP_UPLOAD_MAX_SIZE }}M;
             proxy_pass       http://127.0.0.1:8080;
             proxy_set_header Host             $host;
             proxy_set_header X-Real-IP        $remote_addr;
@@ -142,5 +143,6 @@ data:
             # or "root /path/to/site;" or "fastcgi_pass ..." etc
             root /var/www/html;
             index index.html;
+            autoindex on;
         }
     }

@@ -17,6 +17,8 @@ privatepages:
     API_SECRET: secret
     HTTP_LISTEN: :8080
     LOG_LEVEL: error
+    ARTIFACT_STORAGE_PATH: /data
+    HTTP_UPLOAD_MAX_SIZE: 10 # Mb
   resources: {}
   metrics:
     enable: false
@@ -27,13 +29,13 @@ oauth2proxy:
     pullPolicy: IfNotPresent
     tag: "v7.4.0"
   env:
-    OAUTH2_PROXY_HTTP_ADDRESS: ":4180"
-    OAUTH2_PROXY_METRICS_ADDRESS: ":9090"
+    OAUTH2_PROXY_HTTP_ADDRESS: :4180
+    OAUTH2_PROXY_METRICS_ADDRESS: :9090
     # OAUTH2_PROXY_REDIS_CONNECTION_URL: redis://redis:6379
     # OAUTH2_PROXY_SESSION_STORE_TYPE: redis
-    OAUTH2_PROXY_EMAIL_DOMAINS: "\\*"
+    OAUTH2_PROXY_EMAIL_DOMAINS: "*"
     OAUTH2_PROXY_PROVIDER: github
-    OAUTH2_PROXY_SCOPE: "user:email read:org"
+    OAUTH2_PROXY_SCOPE: user:email read:org
     # OAUTH2_PROXY_GITHUB_ORG: yourorg # optional, if not present - any github user can login
     # OAUTH2_PROXY_GITHUB_TEAM: yourteam # optional
     # OAUTH2_PROXY_REDIRECT_URL: https://your.pages/oauth2/callback
@@ -100,7 +102,7 @@ ingress:
     - host: chart-example.local
       paths:
         - path: /
-          pathType: ImplementationSpecific
+          pathType: ImplementationSpecific # Prefix
   tls: []
   #  - secretName: chart-example-tls
   #    hosts:

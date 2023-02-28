@@ -22,6 +22,6 @@ version: 0.1.0
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 # It is recommended to use it with quotes.
-appVersion: "v0.1-beta"
+appVersion: "v0.1.1-beta"
 
 # todo: add redis deps for oauth2-proxy cache https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/session_storage

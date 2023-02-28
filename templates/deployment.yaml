@@ -36,8 +36,8 @@ spec:
           imagePullPolicy: {{ .Values.privatepages.image.pullPolicy }}
           env:
             {{- range $key, $value := .Values.privatepages.env }}
-            - name: {{ $key }}
-              value: {{ tpl ($value | toString) $ }}
+            - name: "{{ $key }}"
+              value: "{{ $value }}"
             {{- end }}
           ports:
             - name: privatepages
@@ -53,6 +53,9 @@ spec:
               port: privatepages
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
         - name: nginx
           image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
           imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
@@ -95,8 +98,8 @@ spec:
           imagePullPolicy: {{ .Values.oauth2proxy.image.pullPolicy }}
           env:
             {{- range $key, $value := .Values.oauth2proxy.env }}
-            - name: {{ $key }}
-              value: {{ tpl ($value | toString) $ }}
+            - name: "{{ $key }}"
+              value: "{{ $value }}"
             {{- end }}
           ports:
             - name: oauth2-proxy
