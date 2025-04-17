@@ -14,7 +14,7 @@ privatepages:
     # Overrides the image tag whose default is the chart appVersion.
     tag: ""
   env:
-    API_SECRET: secret
+    #API_SECRET: secret
     HTTP_LISTEN: :8080
     LOG_LEVEL: error
     ARTIFACT_STORAGE_PATH: /data
@@ -33,7 +33,7 @@ oauth2proxy:
     OAUTH2_PROXY_METRICS_ADDRESS: :9090
     # OAUTH2_PROXY_REDIS_CONNECTION_URL: redis://redis:6379
     # OAUTH2_PROXY_SESSION_STORE_TYPE: redis
-    OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+    # OAUTH2_PROXY_EMAIL_DOMAINS: "*"
     OAUTH2_PROXY_PROVIDER: github
     OAUTH2_PROXY_SCOPE: user:email read:org
     # OAUTH2_PROXY_GITHUB_ORG: yourorg # optional, if not present - any github user can login
@@ -132,3 +132,6 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+ExternalSecret:
+  enabled: false
