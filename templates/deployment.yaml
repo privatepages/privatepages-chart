@@ -39,6 +39,13 @@ spec:
             - name: "{{ $key }}"
               value: "{{ $value }}"
             {{- end }}
+            {{- range $secret_name := .Values.privatepages.secrets}}
+            - name: {{ $secret_name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}
+                  key: {{ $secret_name }}
+            {{- end }}
           ports:
             - name: privatepages
               containerPort: 8080
@@ -97,6 +104,15 @@ spec:
           image: "{{ .Values.oauth2proxy.image.repository }}:{{ .Values.oauth2proxy.image.tag }}"
           imagePullPolicy: {{ .Values.oauth2proxy.image.pullPolicy }}
           env:
+            {{- if .Values.oauth2proxy.secrets }}
+            {{- range $secret_name := .Values.oauth2proxy.secrets }}
+            - name: {{ $secret_name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}
+                  key: {{ $secret_name }}
+            {{- end }}
+            {{- end }}
             {{- range $key, $value := .Values.oauth2proxy.env }}
             - name: "{{ $key }}"
               value: "{{ $value }}"
