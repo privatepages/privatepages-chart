@@ -34,6 +34,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.privatepages.image.repository }}:{{ .Values.privatepages.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.privatepages.image.pullPolicy }}
+          envFrom:
+            {{- toYaml .Values.privatepages.envFrom | nindent 12 }}
           env:
             {{- range $key, $value := .Values.privatepages.env }}
             - name: "{{ $key }}"
@@ -103,6 +105,8 @@ spec:
         - name: oauth2-proxy
           image: "{{ .Values.oauth2proxy.image.repository }}:{{ .Values.oauth2proxy.image.tag }}"
           imagePullPolicy: {{ .Values.oauth2proxy.image.pullPolicy }}
+          envFrom:
+            {{- toYaml .Values.oauth2proxy.envFrom | nindent 12 }}
           env:
             {{- if .Values.oauth2proxy.secrets }}
             {{- range $secret_name := .Values.oauth2proxy.secrets }}
