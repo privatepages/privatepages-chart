@@ -8,6 +8,9 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  HELM_VERSION: '3.6.3'
+
 jobs:
 
   audit:
@@ -16,12 +19,14 @@ jobs:
       run:
         working-directory: .
     steps:
-    -
-      uses: actions/checkout@v3
-    -
-      uses: azure/setup-helm@v3
-      with:
-        version: v3.6.3
-    -
-      name: Lint chart
-      run: helm lint
+      - 
+        name: Checkout repo
+        uses: actions/checkout@v6
+      -
+        name: Configure helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '${{ env.HELM_VERSION }}'
+      -
+        name: Lint chart
+        run: helm lint
